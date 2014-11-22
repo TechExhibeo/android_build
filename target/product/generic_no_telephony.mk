@@ -25,6 +25,7 @@ PRODUCT_PACKAGES := \
     Keyguard \
     LatinIME \
     Launcher3 \
+    MusicFX \
     OneTimeInitializer \
     Provision \
     SystemUI \
