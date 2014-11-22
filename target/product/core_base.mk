@@ -17,12 +17,13 @@
 # that should not be in PDK should be added in lower level like core.mk.
 
 PRODUCT_PROPERTY_OVERRIDES := \
-    ro.config.alarm_alert=Argon.ogg \
-    ro.config.notification_sound=pixiedust.ogg
+    ro.config.notification_sound=OnTheHunt.ogg \
+    ro.config.alarm_alert=Argon.ogg
 
 PRODUCT_PACKAGES += \
     ContactsProvider \
     DefaultContainerService \
+    Home \
     TelephonyProvider \
     UserDictionaryProvider \
     atrace \

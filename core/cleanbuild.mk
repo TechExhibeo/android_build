@@ -205,7 +205,6 @@ installclean_files := \
 	$(PRODUCT_OUT)/*.txt \
 	$(PRODUCT_OUT)/*.xlb \
 	$(PRODUCT_OUT)/*.zip \
-	$(PRODUCT_OUT)/*.md5sum \
 	$(PRODUCT_OUT)/kernel \
 	$(PRODUCT_OUT)/data \
 	$(PRODUCT_OUT)/skin \
@@ -244,13 +243,13 @@ endif
 dataclean: FILES := $(dataclean_files)
 dataclean:
 	$(hide) rm -rf $(FILES)
-	@echo -e ${PRT_DEL}"Deleted emulator userdata images."${CL_RST}
+	@echo "Deleted emulator userdata images."
 
 .PHONY: installclean
 installclean: FILES := $(installclean_files)
 installclean: dataclean
 	$(hide) rm -rf $(FILES)
-	@echo -e ${PRT_DEL}"Deleted images and staging directories."${CL_RST}
+	@echo "Deleted images and staging directories."
 
 ifeq "$(force_installclean)" "true"
   $(info *** Forcing "make installclean"...)

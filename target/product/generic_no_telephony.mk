@@ -21,10 +21,6 @@ PRODUCT_PACKAGES := \
     Bluetooth \
     Camera2 \
     Gallery2 \
-    InputDevices \
-    Keyguard \
-    LatinIME \
-    Launcher3 \
     MusicFX \
     OneTimeInitializer \
     Provision \

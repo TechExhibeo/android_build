@@ -60,21 +60,6 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
   -a  (--aslr_mode)  <on|off>
       Specify whether to turn on ASLR for the package (on by default).
 
-  --backup <boolean>
-      Enable or disable the execution of backuptool.sh.
-      Disabled by default.
-
-  --override_device <device>
-      Override device-specific asserts. Can be a comma-separated list.
-
-  --override_prop <boolean>
-      Override build.prop items with custom vendor init.
-      Enabled when TARGET_UNIFIED_DEVICE is defined in BoardConfig
-
-  --mount_by_label <boolean>
-      Force the OTA package to mount and format System by label
-      Can be enabled by defining TARGET_SETS_FSTAB. Defaults to false.
-
   -2  (--two_step)
       Generate a 'two-step' OTA package, where recovery is updated
       first, so that any changes made to the system partition are done
@@ -137,10 +122,6 @@ OPTIONS.aslr_mode = True
 OPTIONS.worker_threads = multiprocessing.cpu_count() // 2
 if OPTIONS.worker_threads == 0:
   OPTIONS.worker_threads = 1
-OPTIONS.backuptool = False
-OPTIONS.override_device = 'auto'
-OPTIONS.override_prop = False
-OPTIONS.mount_by_label = False
 OPTIONS.two_step = False
 OPTIONS.no_signing = False
 OPTIONS.block_based = False
@@ -409,10 +390,7 @@ def AppendAssertions(script, info_dict, oem_dict = None):
   oem_props = info_dict.get("oem_fingerprint_properties")
   if oem_props is None or len(oem_props) == 0:
     if OPTIONS.override_device == "auto":
-      if OPTIONS.override_prop:
-        device = GetBuildProp("ro.build.product", info_dict)
-      else:
-        device = GetBuildProp("ro.product.device", info_dict)
+      device = GetBuildProp("ro.product.device", info_dict)
     else:
       device = OPTIONS.override_device
     script.AssertDevice(device)
@@ -512,12 +490,6 @@ def WriteFullOTAPackage(input_zip, output_zip):
                                              OPTIONS.info_dict),
               }
 
-  if not OPTIONS.override_prop:
-    metadata["post-build"] = GetBuildProp("ro.build.fingerprint",
-                                          OPTIONS.info_dict)
-    metadata["pre-device"] = GetBuildProp("ro.product.device",
-                                          OPTIONS.info_dict)
-
   device_specific = common.DeviceSpecificParams(
       input_zip=input_zip,
       input_version=OPTIONS.info_dict["recovery_api_version"],
@@ -557,8 +529,8 @@ def WriteFullOTAPackage(input_zip, output_zip):
   #       set up system to update recovery partition on first boot
   #    complete script normally (allow recovery to mark itself finished and reboot)
 
-#  recovery_img = common.GetBootableImage("recovery.img", "recovery.img",
-#                                         OPTIONS.input_tmp, "RECOVERY")
+  recovery_img = common.GetBootableImage("recovery.img", "recovery.img",
+                                         OPTIONS.input_tmp, "RECOVERY")
   if OPTIONS.two_step:
     if not OPTIONS.info_dict.get("multistage_support", None):
       assert False, "two-step packages not supported by this build"
@@ -578,18 +550,6 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
 """ % bcb_dev)
 
   device_specific.FullOTA_InstallBegin()
-
-  if OPTIONS.backuptool:
-    script.Mount("/system", OPTIONS.mount_by_label)
-    script.RunBackup("backup")
-    if not OPTIONS.mount_by_label:
-      script.Unmount("/system")
-
-  script.ShowProgress(0.5, 0)
-
-  if OPTIONS.wipe_user_data:
-    script.Print("Formatting /data")
-    script.FormatPartition("/data", OPTIONS.mount_by_label)
 
   script.Print("######################################");
   script.Print("#                                    #");
@@ -623,12 +583,9 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   else:
     script.Print("Formatting /system")
     script.FormatPartition("/system")
-    if not OPTIONS.mount_by_label:
-      script.Mount("/system", recovery_mount_options)
-#    if not has_recovery_patch:
-#      script.UnpackPackageDir("recovery", "/system")
-
-    script.Print("Extracting /system")
+    script.Mount("/system", recovery_mount_options)
+    if not has_recovery_patch:
+      script.UnpackPackageDir("recovery", "/system")
     script.UnpackPackageDir("system", "/system")
 
     symlinks = CopyPartitionFiles(system_items, input_zip, output_zip)
@@ -643,8 +600,8 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
       common.ZipWriteStr(output_zip, "recovery/" + fn, data)
       system_items.Get("system/" + fn, dir=False)
 
-#    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
-#                             recovery_img, boot_img)
+    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
+                             recovery_img, boot_img)
 
     system_items.GetMetadata(input_zip)
     system_items.Get("system").SetPermissions(script)
@@ -672,17 +629,10 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
   common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
 
-  if OPTIONS.backuptool:
-    script.ShowProgress(0.2, 10)
-    script.RunBackup("restore")
-
-  script.ShowProgress(0.2, 10)
-  script.Print("Flashing boot.img")
+  script.ShowProgress(0.05, 5)
   script.WriteRawImage("/boot", "boot.img")
 
-  script.ShowProgress(0.1, 0)
-  script.Print("Are you ready for HAZY ROM?")
-  script.Print("ENJOY!!");
+  script.ShowProgress(0.2, 10)
   device_specific.FullOTA_InstallEnd()
 
   if OPTIONS.extra_script is not None:
@@ -766,12 +716,11 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
   script = edify_generator.EdifyGenerator(source_version,
                                           OPTIONS.target_info_dict)
 
-  metadata = {}
-  metadata["post-timestamp"] = GetBuildProp("ro.build.date.utc",
-                                            OPTIONS.info_dict)
-  if not OPTIONS.override_prop:
-    metadata["pre-device"] = GetBuildProp("ro.product.device",
-                                          OPTIONS.info_dict)
+  metadata = {"pre-device": GetBuildProp("ro.product.device",
+                                         OPTIONS.source_info_dict),
+              "post-timestamp": GetBuildProp("ro.build.date.utc",
+                                             OPTIONS.target_info_dict),
+              }
 
   device_specific = common.DeviceSpecificParams(
       source_zip=source_zip,
@@ -783,14 +732,10 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
       metadata=metadata,
       info_dict=OPTIONS.info_dict)
 
-  if not OPTIONS.override_prop:
-    source_fp = GetBuildProp("ro.build.fingerprint", OPTIONS.source_info_dict)
-    target_fp = GetBuildProp("ro.build.fingerprint", OPTIONS.target_info_dict)
-    metadata["pre-build"] = source_fp
-    metadata["post-build"] = target_fp
-
-    script.Mount("/system", OPTIONS.mount_by_label)
-    script.AssertSomeFingerprint(source_fp, target_fp)
+  source_fp = GetBuildProp("ro.build.fingerprint", OPTIONS.source_info_dict)
+  target_fp = GetBuildProp("ro.build.fingerprint", OPTIONS.target_info_dict)
+  metadata["pre-build"] = source_fp
+  metadata["post-build"] = target_fp
 
   source_boot = common.GetBootableImage(
       "/tmp/boot.img", "boot.img", OPTIONS.source_tmp, "BOOT",
@@ -1281,10 +1226,6 @@ else
     script.WriteRawImage("/boot", "boot.img")
     print "writing full boot image (forced by two-step mode)"
 
-  if OPTIONS.wipe_user_data:
-    script.Print("Erasing user data...")
-    script.FormatPartition("/data", OPTIONS.mount_by_label)
-
   script.Print("Removing unneeded files...")
   system_diff.RemoveUnneededFiles(script, ("/system/recovery.img",))
   if vendor_diff:
@@ -1387,9 +1328,9 @@ else
     script.Print("Unpacking new vendor files...")
     script.UnpackPackageDir("vendor", "/vendor")
 
-#  if updating_recovery:
-#    script.Print("Unpacking new recovery...")
-#    script.UnpackPackageDir("recovery", "/system")
+  if updating_recovery and not target_has_recovery_patch:
+    script.Print("Unpacking new recovery...")
+    script.UnpackPackageDir("recovery", "/system")
 
   system_diff.EmitRenames(script)
   if vendor_diff:
@@ -1481,14 +1422,6 @@ def main(argv):
       else:
         raise ValueError("Cannot parse value %r for option %r - only "
                          "integers are allowed." % (a, o))
-    elif o in ("--backup"):
-      OPTIONS.backuptool = bool(a.lower() == 'true')
-    elif o in ("--override_device"):
-      OPTIONS.override_device = a
-    elif o in ("--override_prop"):
-      OPTIONS.override_prop = bool(a.lower() == 'true')
-    elif o in ("--mount_by_label"):
-      OPTIONS.mount_by_label = bool(a.lower() == 'true')
     elif o in ("-2", "--two_step"):
       OPTIONS.two_step = True
     elif o == "--no_signing":
@@ -1517,11 +1450,7 @@ def main(argv):
                                               "extra_script=",
                                               "worker_threads=",
                                               "aslr_mode=",
-                                              "backup=",
-                                              "override_device=",
-                                              "override_prop=",
                                               "two_step",
-                                              "mount_by_label=",
                                               "no_signing",
                                               "block",
                                               "binary=",

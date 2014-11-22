@@ -383,11 +383,7 @@ AIDL := $(HOST_OUT_EXECUTABLES)/aidl$(HOST_EXECUTABLE_SUFFIX)
 PROTOC := $(HOST_OUT_EXECUTABLES)/aprotoc$(HOST_EXECUTABLE_SUFFIX)
 SIGNAPK_JAR := $(HOST_OUT_JAVA_LIBRARIES)/signapk$(COMMON_JAVA_PACKAGE_SUFFIX)
 MKBOOTFS := $(HOST_OUT_EXECUTABLES)/mkbootfs$(HOST_EXECUTABLE_SUFFIX)
-ifeq ($(BOARD_NEEDS_LZMA_MINIGZIP),true)
-MINIGZIP := /usr/bin/lzma
-else
 MINIGZIP := $(HOST_OUT_EXECUTABLES)/minigzip$(HOST_EXECUTABLE_SUFFIX)
-endif
 ifeq (,$(strip $(BOARD_CUSTOM_MKBOOTIMG)))
 MKBOOTIMG := $(HOST_OUT_EXECUTABLES)/mkbootimg$(HOST_EXECUTABLE_SUFFIX)
 else
@@ -470,18 +466,6 @@ ifeq ($(HOST_OS),darwin)
 MD5SUM:=md5 -q
 else
 MD5SUM:=md5sum
-endif
-
-# In-place sed is done different in linux than OS X
-ifeq ($(HOST_OS),darwin)
-GSED:=$(shell which gsed)
-ifeq ($(GSED),)
-SED_INPLACE:=sed -i ''
-else
-SED_INPLACE:=gsed -i
-endif
-else
-SED_INPLACE:=sed -i
 endif
 
 APICHECK_CLASSPATH := $(HOST_JDK_TOOLS_JAR)
@@ -631,14 +615,5 @@ endif
 RS_PREBUILT_CLCORE := prebuilts/sdk/renderscript/lib/$(TARGET_ARCH)/librsrt_$(TARGET_ARCH).bc
 RS_PREBUILT_LIBPATH := -L prebuilts/ndk/8/platforms/android-9/arch-$(TARGET_ARCH)/usr/lib
 RS_PREBUILT_COMPILER_RT := prebuilts/sdk/renderscript/lib/$(TARGET_ARCH)/libcompiler_rt.a
-
-# Rules for QCOM targets
-include $(BUILD_SYSTEM)/qcom_target.mk
-
-#ifneq ($(CUSTOM_BUILD),)
-## We need to be sure the global selinux policies are included
-## last, to avoid accidental resetting by device configs
-#$(eval include vendor/omni/sepolicy/sepolicy.mk)
-#endif
 
 include $(BUILD_SYSTEM)/dumpvar.mk
