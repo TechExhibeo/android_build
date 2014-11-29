@@ -117,7 +117,7 @@ class EdifyGenerator(object):
   def AssertDevice(self, device):
     """Assert that the device identifier is the given string."""
     cmd = ('assert(' +
-           ' || \0'.join(['getprop("ro.product.device") == "%s" || getprop("ro.build.product") == "%s"'
+           ' || '.join(['getprop("ro.product.device") == "%s" || getprop("ro.build.product") == "%s"'
                          % (i, i) for i in device.split(",")]) +
            ' || abort("This package is for device: %s; ' +
            'this device is " + getprop("ro.product.device") + ".");' +
@@ -125,22 +125,40 @@ class EdifyGenerator(object):
     self.script.append(cmd)
 
   def AssertSomeBootloader(self, *bootloaders):
-    """Asert that the bootloader version is one of *bootloaders."""
+    """Assert that the bootloader version is one of *bootloaders."""
     cmd = ("assert(" +
-           " ||\0".join(['getprop("ro.bootloader") == "%s"' % (b,)
+           " || ".join(['getprop("ro.bootloader") == "%s"' % (b,)
                          for b in bootloaders]) +
+           ' || abort("This package supports bootloader(s): ' +
+           ", ".join(["%s" % (b,) for b in bootloaders]) +
+           '; this device has bootloader " + getprop("ro.bootloader") + ".");' +
+           ");")
+    self.script.append(self._WordWrap(cmd))
+
+  def AssertSomeBaseband(self, *basebands):
+    """Assert that the baseband version is one of *basebands."""
+    cmd = ("assert(" +
+           " || ".join(['getprop("ro.baseband") == "%s"' % (b,)
+                         for b in basebands]) +
+           ' || abort("This package supports baseband(s): ' +
+           ", ".join(["%s" % (b,) for b in basebands]) +
+           '; this device has baseband " + getprop("ro.baseband") + ".");' +
            ");")
     self.script.append(self._WordWrap(cmd))
 
   def RunBackup(self, command):
-    self.UnpackPackageDir("system/addon.d", "/system/addon.d")
-    self.script.append('package_extract_file("system/bin/backuptool.sh", "/system/bin/backuptool.sh");')
-    self.script.append('package_extract_file("system/bin/backuptool.functions", "/system/bin/backuptool.functions");')
-    self.SetPermissions("/system/bin/backuptool.sh", 0, 0, 0755, None, None)
-    self.SetPermissions("/system/bin/backuptool.functions", 0, 0, 0644, None, None)
-    self.script.append(('run_program("/system/bin/backuptool.sh", "%s");' % command))
+    self.script.append('package_extract_file("system/bin/backuptool.sh", "/tmp/backuptool.sh");')
+    self.script.append('package_extract_file("system/bin/backuptool.functions", "/tmp/backuptool.functions");')
+    if not self.info.get("use_set_metadata", False):
+      self.script.append('set_perm(0, 0, 0755, "/tmp/backuptool.sh");')
+      self.script.append('set_perm(0, 0, 0644, "/tmp/backuptool.functions");')
+    else:
+      self.script.append('set_metadata("/tmp/backuptool.sh", "uid", 0, "gid", 0, "mode", 0755);')
+      self.script.append('set_metadata("/tmp/backuptool.functions", "uid", 0, "gid", 0, "mode", 0644);')
+    self.script.append(('run_program("/tmp/backuptool.sh", "%s");' % command))
     if command == "restore":
-      self.DeleteFiles(["/system/bin/backuptool.sh", "/system/bin/backuptool.functions"])
+        self.script.append('delete("/system/bin/backuptool.sh");')
+        self.script.append('delete("/system/bin/backuptool.functions");')
 
   def ShowProgress(self, frac, dur):
     """Update the progress bar, advancing it over 'frac' over the next
@@ -196,6 +214,12 @@ class EdifyGenerator(object):
                          (p.fs_type, common.PARTITION_TYPES[p.fs_type],
                           p.device, p.mount_point, mount_dict.get(p.fs_type, "")))
       self.mounts.add(p.mount_point)
+
+  def Unmount(self, mount_point):
+    """Unmount the partiiton with the given mount_point."""
+    if mount_point in self.mounts:
+      self.mounts.remove(mount_point)
+      self.script.append('unmount("%s");' % (mount_point,))
 
   def UnpackPackageDir(self, src, dst):
     """Unpack a given directory from the OTA package into the given
