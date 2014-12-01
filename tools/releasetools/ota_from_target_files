@@ -86,10 +86,6 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
   --override_device <device>
       Override device-specific asserts. Can be a comma-separated list.
 
-  --recovery
-      Generates an OTA package that will flash the recovery partition
-      when installed (included with the two step flag).
-
   --override_prop <boolean>
       Override build.prop items with custom vendor init.
       Enabled when TARGET_UNIFIED_DEVICE is defined in BoardConfig
@@ -142,7 +138,6 @@ OPTIONS.oem_source = None
 OPTIONS.fallback_to_full = True
 OPTIONS.backuptool = False
 OPTIONS.override_device = 'auto'
-OPTIONS.recovery = False
 OPTIONS.override_prop = False
 
 def MostPopularKey(d, default):
@@ -499,6 +494,7 @@ def WriteFullOTAPackage(input_zip, output_zip):
     script.Mount("/oem", recovery_mount_options)
     oem_dict = common.LoadDictionaryFromLines(open(OPTIONS.oem_source).readlines())
 
+
   if OPTIONS.override_prop:
     metadata = {"post-timestamp": GetBuildProp("ro.build.date.utc",
                                                OPTIONS.info_dict),
@@ -588,12 +584,9 @@ def WriteFullOTAPackage(input_zip, output_zip):
                      ""+input_zip.read("SYSTEM/bin/backuptool.sh"))
       common.ZipWriteStr(output_zip, "system/bin/backuptool.functions",
                      ""+input_zip.read("SYSTEM/bin/backuptool.functions"))
-    script.AppendExtra("if ! is_mounted(\"/system\") then")
     script.Mount("/system")
-    script.AppendExtra("endif;")
     script.RunBackup("backup")
     script.Unmount("/system")
->>>>>>> 4fef878d291626702421b6fac1e217361a321774
 
   system_progress = 0.75
 
@@ -601,6 +594,18 @@ def WriteFullOTAPackage(input_zip, output_zip):
     system_progress -= 0.1
   if HasVendorPartition(input_zip):
     system_progress -= 0.1
+
+  if block_based:
+    common.ZipWriteStr(output_zip, "system/bin/otasigcheck.sh",
+                   ""+input_zip.read("SYSTEM/bin/otasigcheck.sh"))
+
+  script.AppendExtra("if is_mounted(\"/data\") then")
+  script.ValidateSignatures("data")
+  script.AppendExtra("else")
+  script.Mount("/data")
+  script.ValidateSignatures("data")
+  script.Unmount("/data")
+  script.AppendExtra("endif;")
 
   if "selinux_fc" in OPTIONS.info_dict:
     WritePolicyConfig(OPTIONS.info_dict["selinux_fc"], output_zip)
@@ -667,6 +672,12 @@ def WriteFullOTAPackage(input_zip, output_zip):
   common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
   common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
 
+  if block_based:
+    script.Mount("/system")
+  script.ValidateSignatures("cleanup")
+  if block_based:
+    script.Unmount("/system")
+
   if OPTIONS.backuptool:
     script.ShowProgress(0.02, 10)
     if block_based:
@@ -704,6 +715,9 @@ endif;
 """ % bcb_dev)
   script.AddToZip(input_zip, output_zip, input_path=OPTIONS.updater_binary)
   WriteMetadata(metadata, output_zip)
+
+  common.ZipWriteStr(output_zip, "META-INF/org/cyanogenmod/releasekey",
+                     ""+input_zip.read("META/releasekey.txt"))
 
 def WritePolicyConfig(file_context, output_zip):
   f = open(file_context, 'r');
@@ -1495,8 +1509,6 @@ def main(argv):
       OPTIONS.backuptool = bool(a.lower() == 'true')
     elif o in ("--override_device"):
       OPTIONS.override_device = a
-    elif o in ("--recovery"):
-      OPTIONS.recovery = True
     elif o in ("--override_prop"):
       OPTIONS.override_prop = bool(a.lower() == 'true')
     else:
@@ -1522,7 +1534,6 @@ def main(argv):
                                               "no_fallback_to_full",
                                               "backup=",
                                               "override_device=",
-                                              "recovery"
                                               "override_prop="],
                              extra_option_handler=option_handler)
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #
 # Copyright (C) 2013 The CyanogenMod Project
-# This code has been modified. Portions copyright (C) 2013, ParanoidAndroid Project.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +42,7 @@ except ImportError:
 # Parse the command line
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=textwrap.dedent('''\
     repopick.py is a utility to simplify the process of cherry picking
-    patches from ParanoidAndroid's Gerrit instance.
+    patches from CyanogenMod's Gerrit instance.
 
     Given a list of change numbers, repopick will cd into the project path
     and cherry pick the latest patch available.
@@ -58,7 +57,6 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
     branch in all repos first before performing any cherry picks.'''))
 parser.add_argument('change_number', nargs='*', help='change number to cherry pick')
 parser.add_argument('-i', '--ignore-missing', action='store_true', help='do not error out if a patch applies to a missing directory')
-parser.add_argument('-c', '--checkout', action='store_true', help='checkout instead of cherry pick')
 parser.add_argument('-s', '--start-branch', nargs=1, help='start the specified branch before cherry picking')
 parser.add_argument('-a', '--abandon-first', action='store_true', help='before cherry picking, abandon the branch specified in --start-branch')
 parser.add_argument('-b', '--auto-branch', action='store_true', help='shortcut to "--start-branch auto --abandon-first --ignore-missing"')
@@ -189,7 +187,7 @@ while(True):
 
 # Get all commits for a specified topic
 if args.topic:
-    url = 'http://gerrit.aospal.com/changes/?q=topic:%s' % args.topic
+    url = 'http://review.cyanogenmod.org/changes/?q=topic:%s' % args.topic
     if args.verbose:
         print('Fetching all commits from topic: %s\n' % args.topic)
     f = urllib.request.urlopen(url)
@@ -238,7 +236,7 @@ for change in args.change_number:
     # gerrit returns two lines, a magic string and then valid JSON:
     #   )]}'
     #   [ ... valid JSON ... ]
-    url = 'http://gerrit.aospal.com/changes/?q=%s&o=CURRENT_REVISION&o=CURRENT_COMMIT&pp=0' % change
+    url = 'http://review.cyanogenmod.org/changes/?q=%s&o=CURRENT_REVISION&o=CURRENT_COMMIT&pp=0' % change
     if args.verbose:
         print('Fetching from: %s\n' % url)
     f = urllib.request.urlopen(url)
@@ -337,3 +335,4 @@ for change in args.change_number:
       execute_cmd(cmd)
     if not args.quiet:
         print('')
+
