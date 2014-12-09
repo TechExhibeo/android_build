@@ -175,7 +175,7 @@ def add_to_manifest(repositories, fallback_branch = None):
 
         print('Adding dependency: HazyTeam/%s -> %s' % (repo_name, repo_target))
         project = ElementTree.Element("project", attrib = { "path": repo_target,
-            "remote": "github", "name": "HazyTeam/%s" % repo_name })
+            "remote": "github", "name": "%s" % repo_name })
 
         if 'branch' in repository:
             project.set('revision',repository['branch'])
@@ -206,7 +206,7 @@ def fetch_dependencies(repo_path, fallback_branch = None):
         fetch_list = []
 
         for dependency in dependencies:
-            if not is_in_manifest("HazyTeam/%s" % dependency['repository']):
+            if not is_in_manifest("%s" % dependency['repository']):
                 fetch_list.append(dependency)
                 syncable_repos.append(dependency['target_path'])
 
