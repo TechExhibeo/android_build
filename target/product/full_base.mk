@@ -25,6 +25,7 @@ PRODUCT_PACKAGES := \
     libWnnEngDic \
     libWnnJpnDic \
     libwnndict \
+    Superuser \
     WAPPushManager
 
 # Additional settings used in all AOSP builds
