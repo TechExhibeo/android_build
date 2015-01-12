@@ -18,78 +18,59 @@
 Given a target-files zipfile, produces an OTA package that installs
 that build.  An incremental OTA is produced if -i is given, otherwise
 a full OTA is produced.
-
 Usage:  ota_from_target_files [flags] input_target_files output_ota_package
-
   --board_config  <file>
       Deprecated.
-
   -k (--package_key) <key> Key to use to sign the package (default is
       the value of default_system_dev_certificate from the input
       target-files's META/misc_info.txt, or
       "build/target/product/security/testkey" if that value is not
       specified).
-
       For incremental OTAs, the default value is based on the source
       target-file, not the target build.
-
   -i  (--incremental_from)  <file>
       Generate an incremental OTA using the given target-files zip as
       the starting build.
-
   -v  (--verify)
       Remount and verify the checksums of the files written to the
       system and vendor (if used) partitions.  Incremental builds only.
-
   -o  (--oem_settings)  <file>
       Use the file to specify the expected OEM-specific properties
       on the OEM partition of the intended device.
-
   -w  (--wipe_user_data)
       Generate an OTA package that will wipe the user data partition
       when installed.
-
   -n  (--no_prereq)
       Omit the timestamp prereq check normally included at the top of
       the build scripts (used for developer OTA packages which
       legitimately need to go back and forth).
-
   -e  (--extra_script)  <file>
       Insert the contents of file at the end of the update script.
-
   -a  (--aslr_mode)  <on|off>
       Specify whether to turn on ASLR for the package (on by default).
-
   -2  (--two_step)
       Generate a 'two-step' OTA package, where recovery is updated
       first, so that any changes made to the system partition are done
       using the new recovery (new kernel, etc.).
-
   --block
       Generate a block-based OTA if possible.  Will fall back to a
       file-based OTA if the target_files is older and doesn't support
       block-based OTAs.
-
   -b  (--binary)  <file>
       Use the given binary as the update-binary in the output package,
       instead of the binary in the build's target_files.  Use for
       development only.
-
   -t  (--worker_threads) <int>
       Specifies the number of worker-threads that will be used when
       generating patches for incremental updates (defaults to 3).
-
   --backup <boolean>
       Enable or disable the execution of backuptool.sh.
       Disabled by default.
-
   --override_device <device>
       Override device-specific asserts. Can be a comma-separated list.
-
   --override_prop <boolean>
       Override build.prop items with custom vendor init.
       Enabled when TARGET_UNIFIED_DEVICE is defined in BoardConfig
-
 """
 
 import sys
@@ -131,7 +112,6 @@ OPTIONS.worker_threads = multiprocessing.cpu_count() // 2
 if OPTIONS.worker_threads == 0:
   OPTIONS.worker_threads = 1
 OPTIONS.two_step = False
-OPTIONS.recovery = False
 OPTIONS.no_signing = False
 OPTIONS.block_based = False
 OPTIONS.updater_binary = None
@@ -271,7 +251,6 @@ class Item:
     all children and determine the best strategy for using set_perm_recursive and
     set_perm to correctly chown/chmod all the files to their desired
     values.  Recursively calls itself for all descendants.
-
     Returns a dict of {(uid, gid, dmode, fmode, selabel, capabilities): count} counting up
     all descendants of this node.  (dmode or fmode may be None.)  Also
     sets the best_subtree of each directory Item to the (uid, gid,
@@ -545,28 +524,25 @@ def WriteFullOTAPackage(input_zip, output_zip):
   #       set up system to update recovery partition on first boot
   #    complete script normally (allow recovery to mark itself finished and reboot)
 
-
-  if OPTIONS.recovery:
-
-    recovery_img = common.GetBootableImage("recovery.img", "recovery.img",
-                                        OPTIONS.input_tmp, "RECOVERY")
-    if OPTIONS.two_step:
-      if not OPTIONS.info_dict.get("multistage_support", None):
-        assert False, "two-step packages not supported by this build"
-      fs = OPTIONS.info_dict["fstab"]["/misc"]
-      assert fs.fs_type.upper() == "EMMC", \
-          "two-step packages only supported on devices with EMMC /misc partitions"
-      bcb_dev = {"bcb_dev": fs.device}
-      common.ZipWriteStr(output_zip, "recovery.img", recovery_img.data)
-      script.AppendExtra("""
-  if get_stage("%(bcb_dev)s") == "2/3" then
-  """ % bcb_dev)
-      script.WriteRawImage("/recovery", "recovery.img")
-      script.AppendExtra("""
-  set_stage("%(bcb_dev)s", "3/3");
-  reboot_now("%(bcb_dev)s", "recovery");
-  else if get_stage("%(bcb_dev)s") == "3/3" then
-  """ % bcb_dev)
+  recovery_img = common.GetBootableImage("recovery.img", "recovery.img",
+                                         OPTIONS.input_tmp, "RECOVERY")
+  if OPTIONS.two_step:
+    if not OPTIONS.info_dict.get("multistage_support", None):
+      assert False, "two-step packages not supported by this build"
+    fs = OPTIONS.info_dict["fstab"]["/misc"]
+    assert fs.fs_type.upper() == "EMMC", \
+        "two-step packages only supported on devices with EMMC /misc partitions"
+    bcb_dev = {"bcb_dev": fs.device}
+    common.ZipWriteStr(output_zip, "recovery.img", recovery_img.data)
+    script.AppendExtra("""
+if get_stage("%(bcb_dev)s") == "2/3" then
+""" % bcb_dev)
+    script.WriteRawImage("/recovery", "recovery.img")
+    script.AppendExtra("""
+set_stage("%(bcb_dev)s", "3/3");
+reboot_now("%(bcb_dev)s", "recovery");
+else if get_stage("%(bcb_dev)s") == "3/3" then
+""" % bcb_dev)
 
   script.AppendExtra("ifelse(is_mounted(\"/system\"), unmount(\"/system\"));")
   device_specific.FullOTA_InstallBegin()
@@ -623,14 +599,12 @@ def WriteFullOTAPackage(input_zip, output_zip):
     system_diff = common.BlockDifference("system", system_tgt, src=None)
     system_diff.WriteScript(script, output_zip)
   else:
-    script.Print("Formatting /system")
     script.FormatPartition("/system")
     script.Mount("/system", recovery_mount_options)
-    if OPTIONS.recovery and not has_recovery_patch:
+    if not has_recovery_patch:
       script.UnpackPackageDir("recovery", "/system")
     script.UnpackPackageDir("system", "/system")
     symlinks = CopyPartitionFiles(system_items, input_zip, output_zip)
-    script.Print("Symlinking")
     script.MakeSymlinks(symlinks)
 
   boot_img = common.GetBootableImage("boot.img", "boot.img",
@@ -641,8 +615,7 @@ def WriteFullOTAPackage(input_zip, output_zip):
       common.ZipWriteStr(output_zip, "recovery/" + fn, data)
       system_items.Get("system/" + fn, dir=False)
 
-    if OPTIONS.recovery:
-      common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
+    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
                              recovery_img, boot_img)
 
     system_items.GetMetadata(input_zip)
@@ -813,15 +786,12 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
   updating_boot = (not OPTIONS.two_step and
                    (source_boot.data != target_boot.data))
 
-  if OPTIONS.recovery:
-    source_recovery = common.GetBootableImage(
-        "/tmp/recovery.img", "recovery.img", OPTIONS.source_tmp, "RECOVERY",
-        OPTIONS.source_info_dict)
-    target_recovery = common.GetBootableImage(
-        "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
-    updating_recovery = (source_recovery.data != target_recovery.data)
-  else:
-    updating_recovery =  False
+  source_recovery = common.GetBootableImage(
+      "/tmp/recovery.img", "recovery.img", OPTIONS.source_tmp, "RECOVERY",
+      OPTIONS.source_info_dict)
+  target_recovery = common.GetBootableImage(
+      "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
+  updating_recovery = (source_recovery.data != target_recovery.data)
 
   system_src = GetImage("system", OPTIONS.source_tmp, OPTIONS.source_info_dict)
   system_tgt = GetImage("system", OPTIONS.target_tmp, OPTIONS.target_info_dict)
@@ -1196,15 +1166,12 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
   updating_boot = (not OPTIONS.two_step and
                    (source_boot.data != target_boot.data))
 
-  if OPTIONS.recovery:
-    source_recovery = common.GetBootableImage(
-        "/tmp/recovery.img", "recovery.img", OPTIONS.source_tmp, "RECOVERY",
-        OPTIONS.source_info_dict)
-    target_recovery = common.GetBootableImage(
-        "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
-    updating_recovery = (source_recovery.data != target_recovery.data)
-  else:
-    updating_recovery =  False
+  source_recovery = common.GetBootableImage(
+      "/tmp/recovery.img", "recovery.img", OPTIONS.source_tmp, "RECOVERY",
+      OPTIONS.source_info_dict)
+  target_recovery = common.GetBootableImage(
+      "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
+  updating_recovery = (source_recovery.data != target_recovery.data)
 
   # Here's how we divide up the progress bar:
   #  0.1 for verifying the start state (PatchCheck calls)
@@ -1503,7 +1470,6 @@ def main(argv):
                          "integers are allowed." % (a, o))
     elif o in ("-2", "--two_step"):
       OPTIONS.two_step = True
-      OPTIONS.recovery = True
     elif o == "--no_signing":
       OPTIONS.no_signing = True
     elif o in ("--verify"):
