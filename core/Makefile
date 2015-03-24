@@ -752,6 +752,9 @@ else
         build/target/product/security/bacon
 endif
 
+# ArchiDroid
+include $(BUILD_SYSTEM)/archidroid.mk
+
 # Generate a file containing the keys that will be read by the
 # recovery binary.
 RECOVERY_INSTALL_OTA_KEYS := \
@@ -821,7 +824,9 @@ $(INSTALLED_RECOVERYIMAGE_TARGET): $(MKBOOTIMG) \
 		$(recovery_kernel)
 	@echo -e ${CL_CYN}"----- Making recovery image ------"${CL_RST}
 	$(hide) $(MKBOOTIMG) $(INTERNAL_RECOVERYIMAGE_ARGS) $(BOARD_MKBOOTIMG_ARGS) --output $@
+	ifneq ($(ARCHIDROID_IGNORE_RECOVERY_SIZE),true)
 	$(hide) $(call assert-max-image-size,$@,$(BOARD_RECOVERYIMAGE_PARTITION_SIZE),raw)
+	endif
 	@echo -e ${CL_CYN}"Made recovery image: $@"${CL_RST}
 endif
 
@@ -830,6 +835,7 @@ $(RECOVERY_RESOURCE_ZIP): $(INSTALLED_RECOVERYIMAGE_TARGET)
 	$(hide) find $(TARGET_RECOVERY_ROOT_OUT)/res -type f | sort | zip -0qrj $@ -@
 
 else
+
 INSTALLED_RECOVERYIMAGE_TARGET :=
 RECOVERY_RESOURCE_ZIP :=
 endif

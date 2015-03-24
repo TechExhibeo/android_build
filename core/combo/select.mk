@@ -23,6 +23,9 @@
 # Build a target string like "linux-arm" or "darwin-x86".
 combo_os_arch := $($(combo_target)OS)-$($(combo_target)ARCH)
 
+# ArchiDroid
+include $(BUILD_SYSTEM)/archidroid.mk
+
 # Set reasonable defaults for the various variables
 
 $(combo_target)CC := $(CC)
@@ -47,7 +50,7 @@ $(combo_target)HAVE_STRLCAT := 0
 $(combo_target)HAVE_KERNEL_MODULES := 0
 
 $(combo_target)GLOBAL_CFLAGS := -fno-exceptions -Wno-multichar
-$(combo_target)RELEASE_CFLAGS := -O2 -g -fno-strict-aliasing
+$(combo_target)RELEASE_CFLAGS := $(ARCHIDROID_GCC_CFLAGS_ARM) -fno-strict-aliasing
 $(combo_target)GLOBAL_LDFLAGS :=
 $(combo_target)GLOBAL_ARFLAGS := crsP
 
