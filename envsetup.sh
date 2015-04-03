@@ -307,11 +307,7 @@ function check_bash_version()
     fi
 
     # Keep us from trying to run in bash that's too old.
-<<<<<<< HEAD
-    if [ ${BASH_VERSINFO[0]} -lt 4 ]; then
-=======
     if [ "${BASH_VERSINFO[0]}" -lt 4 ] ; then
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
         return 2
     fi
 	
@@ -504,11 +500,7 @@ function print_lunch_menu()
        echo "  (ohai, koush!)"
     fi
     echo
-<<<<<<< HEAD
     if [ "z${CUSTOM_DEVICES_ONLY}" != "z" ]; then
-=======
-    if [ "z${CM_DEVICES_ONLY}" != "z" ]; then
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
        echo "Breakfast menu... pick a combo:"
     else
        echo "Lunch menu... pick a combo:"
@@ -522,11 +514,7 @@ function print_lunch_menu()
         i=$(($i+1))
     done | column
 
-<<<<<<< HEAD
     if [ "z${CUSTOM_DEVICES_ONLY}" != "z" ]; then
-=======
-    if [ "z${CM_DEVICES_ONLY}" != "z" ]; then
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
        echo "... and don't forget the bacon!"
     fi
 
@@ -549,17 +537,10 @@ function breakfast()
 {
     target=$1
     local variant=$2
-<<<<<<< HEAD
     CUSTOM_DEVICES_ONLY="true"
     unset LUNCH_MENU_CHOICES
     add_lunch_combo full-eng
     for f in `/bin/ls vendor/hazy/vendorsetup.sh 2> /dev/null`
-=======
-    CM_DEVICES_ONLY="true"
-    unset LUNCH_MENU_CHOICES
-    add_lunch_combo full-eng
-    for f in `/bin/ls vendor/cm/vendorsetup.sh 2> /dev/null`
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
         do
             echo "including $f"
             . $f
@@ -575,19 +556,11 @@ function breakfast()
             # A buildtype was specified, assume a full device name
             lunch $target
         else
-<<<<<<< HEAD
             # This is probably just the hazy model name
             if [ -z "$variant" ]; then
                 variant="userdebug"
             fi
             lunch hazy_$target-$variant
-=======
-            # This is probably just the CM model name
-            if [ -z "$variant" ]; then
-                variant="userdebug"
-            fi
-            lunch cm_$target-$variant
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
         fi
     fi
     return $?
@@ -749,13 +722,8 @@ function tapas()
 function eat()
 {
     if [ "$OUT" ] ; then
-<<<<<<< HEAD
         MODVERSION=$(get_build_var ROM_VERSION)
         ZIPFILE=hazy-$MODVERSION.zip
-=======
-        MODVERSION=$(get_build_var CM_VERSION)
-        ZIPFILE=cm-$MODVERSION.zip
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
         ZIPPATH=$OUT/$ZIPFILE
         if [ ! -f $ZIPPATH ] ; then
             echo "Nothing to eat"
@@ -770,11 +738,7 @@ function eat()
             done
             echo "Device Found.."
         fi
-<<<<<<< HEAD
     if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD");
-=======
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD");
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     then
         # if adbd isn't root we can't write to /cache/recovery/
         adb root
@@ -796,11 +760,7 @@ EOF
     fi
     return $?
     else
-<<<<<<< HEAD
         echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
-=======
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     fi
 }
 
@@ -2017,11 +1977,7 @@ function installboot()
     sleep 1
     adb wait-for-online shell mount /system 2>&1 > /dev/null
     adb wait-for-online remount
-<<<<<<< HEAD
     if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD");
-=======
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD");
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     then
         adb push $OUT/boot.img /cache/
         for i in $OUT/system/lib/modules/*;
@@ -2032,11 +1988,7 @@ function installboot()
         adb shell chmod 644 /system/lib/modules/*
         echo "Installation complete."
     else
-<<<<<<< HEAD
         echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
-=======
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     fi
 }
 
@@ -2070,21 +2022,13 @@ function installrecovery()
     sleep 1
     adb wait-for-online shell mount /system 2>&1 >> /dev/null
     adb wait-for-online remount
-<<<<<<< HEAD
     if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD");
-=======
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD");
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     then
         adb push $OUT/recovery.img /cache/
         adb shell dd if=/cache/recovery.img of=$PARTITION
         echo "Installation complete."
     else
-<<<<<<< HEAD
         echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
-=======
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     fi
 }
 
@@ -2451,11 +2395,7 @@ function dopush()
         echo "Device Found."
     fi
 
-<<<<<<< HEAD
     if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD");
-=======
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD");
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     then
     # retrieve IP and PORT info if we're using a TCP connection
     TCPIPPORT=$(adb devices | egrep '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+[^0-9]+' \
@@ -2473,15 +2413,11 @@ function dopush()
     adb remount &> /dev/null
 
     mkdir -p $OUT
-<<<<<<< HEAD
-    $func $* | tee $OUT/.log
-=======
     ($func $*|tee $OUT/.log;return ${PIPESTATUS[0]})
     ret=$?;
     if [ $ret -ne 0 ]; then
         rm -f $OUT/.log;return $ret
     fi
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 
     # Install: <file>
     LOC="$(cat $OUT/.log | sed -r 's/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' | grep '^Install: ' | cut -d ':' -f 2)"
@@ -2562,11 +2498,7 @@ EOF
     rm -f $OUT/.log
     return 0
     else
-<<<<<<< HEAD
         echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
-=======
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     fi
 }
 
@@ -2728,7 +2660,6 @@ do
 done
 unset f
 
-<<<<<<< HEAD
 addcompletions
 
 #check_bash_version && {
@@ -2744,19 +2675,3 @@ addcompletions
 #}
 
 #export ANDROID_BUILD_TOP=$(gettop)
-=======
-# Add completions
-check_bash_version && {
-    dirs="sdk/bash_completion vendor/cm/bash_completion"
-    for dir in $dirs; do
-    if [ -d ${dir} ]; then
-        for f in `/bin/ls ${dir}/[a-z]*.bash 2> /dev/null`; do
-            echo "including $f"
-            . $f
-        done
-    fi
-    done
-}
-
-export ANDROID_BUILD_TOP=$(gettop)
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
