@@ -824,7 +824,6 @@ endif
 
 ifneq (,$(filter 560dpi xxxhdpi xxhdpi xhdpi,$(recovery_density)))
 recovery_font := $(call project-path-for,recovery)/fonts/18x32.png
-<<<<<<< HEAD
 else
 recovery_font := $(call project-path-for,recovery)/fonts/12x22.png
 endif
@@ -833,16 +832,6 @@ ifneq ($(TARGET_RECOVERY_DEVICE_DIRS),)
 recovery_root_private := $(strip \
   $(foreach d,$(TARGET_RECOVERY_DEVICE_DIRS), $(wildcard $(d)/recovery/root)))
 else
-=======
-else
-recovery_font := $(call project-path-for,recovery)/fonts/12x22.png
-endif
-
-ifneq ($(TARGET_RECOVERY_DEVICE_DIRS),)
-recovery_root_private := $(strip \
-  $(foreach d,$(TARGET_RECOVERY_DEVICE_DIRS), $(wildcard $(d)/recovery/root)))
-else
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 recovery_root_private := $(strip $(wildcard $(TARGET_DEVICE_DIR)/recovery/root))
 endif
 ifneq ($(recovery_root_private),)
@@ -935,11 +924,7 @@ $(recovery_ramdisk): $(MKBOOTFS) $(MINIGZIP) $(RECOVERYIMAGE_EXTRA_DEPS) \
 	$(hide) mkdir -p $(TARGET_RECOVERY_OUT)
 	$(hide) mkdir -p $(TARGET_RECOVERY_ROOT_OUT)/etc $(TARGET_RECOVERY_ROOT_OUT)/tmp
 	@echo -e ${CL_CYN}"Copying baseline ramdisk..."${CL_RST}
-<<<<<<< HEAD
-	$(hide) cp -R $(TARGET_ROOT_OUT)/ $(TARGET_RECOVERY_OUT)
-=======
 	$(hide) (cd $(PRODUCT_OUT) && tar -cf - $(TARGET_COPY_OUT_ROOT) | (cd $(TARGET_RECOVERY_OUT) && tar -xf -))
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 	@echo -e ${CL_CYN}"Modifying ramdisk contents..."${CL_RST}
 	$(hide) rm -f $(TARGET_RECOVERY_ROOT_OUT)/init*.rc
 	$(hide) cp -f $(recovery_initrc) $(TARGET_RECOVERY_ROOT_OUT)/
@@ -1512,11 +1497,7 @@ ifdef BOARD_RAMDISK_OFFSET
 	$(hide) echo "$(BOARD_RAMDISK_OFFSET)" > $(zip_root)/RECOVERY/ramdisk_offset
 endif
 ifeq ($(strip $(BOARD_KERNEL_SEPARATED_DT)),true)
-<<<<<<< HEAD
-	$(hide) echo "$(INSTALLED_DTIMAGE_TARGET)" > $(zip_root)/RECOVERY/dt_args
-=======
 	$(hide) $(ACP) $(INSTALLED_DTIMAGE_TARGET) $(zip_root)/RECOVERY/dt
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 endif
 	@# Components of the boot image
 	$(hide) mkdir -p $(zip_root)/BOOT
@@ -1550,11 +1531,7 @@ ifdef BOARD_RAMDISK_OFFSET
 endif
 
 ifeq ($(strip $(BOARD_KERNEL_SEPARATED_DT)),true)
-<<<<<<< HEAD
-	$(hide) echo "$(INSTALLED_DTIMAGE_TARGET)" > $(zip_root)/BOOT/dt_args
-=======
 	$(hide) $(ACP) $(INSTALLED_DTIMAGE_TARGET) $(zip_root)/BOOT/dt
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 endif
 ifdef ZIP_SAVE_UBOOTIMG_ARGS
 	$(hide) echo "$(ZIP_SAVE_UBOOTIMG_ARGS)" > $(zip_root)/BOOT/ubootargs
@@ -1679,11 +1656,7 @@ endif
 ifeq ($(WITH_GMS),true)
     $(INTERNAL_OTA_PACKAGE_TARGET): backuptool := false
 else
-<<<<<<< HEAD
 ifneq ($(CUSTOM_BUILD),)
-=======
-ifneq ($(CM_BUILD),)
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
     $(INTERNAL_OTA_PACKAGE_TARGET): backuptool := true
 else
     $(INTERNAL_OTA_PACKAGE_TARGET): backuptool := false
@@ -1709,10 +1682,7 @@ $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(DISTTOOLS)
 	@echo -e ${CL_YLW}"Package OTA:"${CL_RST}" $@"
 	$(hide) MKBOOTIMG=$(MKBOOTIMG) \
 	   $(OTA_FROM_TARGET_SCRIPT) -v \
-<<<<<<< HEAD
-=======
 	   --block \
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 	   -p $(HOST_OUT) \
 	   -k $(KEY_CERT_PAIR) \
 	   --backup=$(backuptool) \
@@ -1720,24 +1690,14 @@ $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(DISTTOOLS)
 	   $(if $(OEM_OTA_CONFIG), -o $(OEM_OTA_CONFIG)) \
 	   $(BUILT_TARGET_FILES_PACKAGE) $@
 
-<<<<<<< HEAD
-HAZY_TARGET_PACKAGE := $(PRODUCT_OUT)/$(TARGET_PRODUCT)-$(ROM_VERSION).zip
-=======
-CM_TARGET_PACKAGE := $(PRODUCT_OUT)/cm-$(CM_VERSION).zip
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
+HAZY_TARGET_PACKAGE := $(PRODUCT_OUT)/hazy-$(HAZY_VERSION).zip
 
 .PHONY: otapackage bacon
 otapackage: $(INTERNAL_OTA_PACKAGE_TARGET)
 bacon: otapackage
-<<<<<<< HEAD
 	$(hide) ln -f $(INTERNAL_OTA_PACKAGE_TARGET) $(HAZY_TARGET_PACKAGE)
 	$(hide) $(MD5SUM) $(HAZY_TARGET_PACKAGE) > $(HAZY_TARGET_PACKAGE).md5sum
 	@echo -e ${CL_CYN}"Package Complete: $(HAZY_TARGET_PACKAGE)"${CL_RST}
-=======
-	$(hide) ln -f $(INTERNAL_OTA_PACKAGE_TARGET) $(CM_TARGET_PACKAGE)
-	$(hide) $(MD5SUM) $(CM_TARGET_PACKAGE) > $(CM_TARGET_PACKAGE).md5sum
-	@echo -e ${CL_CYN}"Package Complete: $(CM_TARGET_PACKAGE)"${CL_RST}
->>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 
 endif    # recovery_fstab is defined
 endif    # TARGET_NO_KERNEL != true
