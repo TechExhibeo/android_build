@@ -65,14 +65,18 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
   -t  (--worker_threads) <int>
       Specifies the number of worker-threads that will be used when
       generating patches for incremental updates (defaults to 3).
+
   --backup <boolean>
       Enable or disable the execution of backuptool.sh.
       Disabled by default.
+
   --override_device <device>
       Override device-specific asserts. Can be a comma-separated list.
+
   --override_prop <boolean>
       Override build.prop items with custom vendor init.
       Enabled when TARGET_UNIFIED_DEVICE is defined in BoardConfig
+
 """
 
 import sys
@@ -459,13 +463,12 @@ def GetImage(which, tmpdir, info_dict):
 
 
 def CopyInstallTools(output_zip):
-  oldcwd = os.getcwd()
-  os.chdir(os.getenv('OUT'))
-  for root, subdirs, files in os.walk("install"):
+  install_path = os.path.join(OPTIONS.input_tmp, "INSTALL")
+  for root, subdirs, files in os.walk(install_path):
     for f in files:
-      p = os.path.join(root, f)
-      output_zip.write(p, p)
-  os.chdir(oldcwd)
+      install_source = os.path.join(root, f)
+      install_target = os.path.join("install", os.path.relpath(root, install_path), f)
+      output_zip.write(install_source, install_target)
 
 
 def WriteFullOTAPackage(input_zip, output_zip):

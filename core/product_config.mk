@@ -192,9 +192,15 @@ else
     # files in the tree.
     all_product_configs := $(get-all-product-makefiles)
   endif # TARGET_BUILD_APPS
+<<<<<<< HEAD
 endif # CUSTOM_BUILD
 
 ifeq ($(CUSTOM_BUILD),)
+=======
+endif # CM_BUILD
+
+ifeq ($(CM_BUILD),)
+>>>>>>> 7435a914a1c402d83ae0934d5e8ec66c7ac39076
 # Find the product config makefile for the current product.
 # all_product_configs consists items like:
 # <product_name>:<path_to_the_product_makefile>
