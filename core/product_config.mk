@@ -182,6 +182,9 @@ include $(BUILD_SYSTEM)/device.mk
 # A CM build needs only the CM product makefiles.
 ifneq ($(CM_BUILD),)
   all_product_configs := $(shell find device -path "*/$(CM_BUILD)/cm.mk")
+# A CUSTOM build needs only the CUSTOM product makefiles.
+ifneq ($(CUSTOM_BUILD),)
+  all_product_configs := $(shell ls device/*/$(CUSTOM_BUILD)/$(TARGET_PRODUCT).mk)
 else
   ifneq ($(strip $(TARGET_BUILD_APPS)),)
   # An unbundled app build needs only the core product makefiles.
@@ -192,9 +195,9 @@ else
     # files in the tree.
     all_product_configs := $(get-all-product-makefiles)
   endif # TARGET_BUILD_APPS
-endif # CM_BUILD
+endif # CUSTOM_BUILD
 
-ifeq ($(CM_BUILD),)
+ifeq ($(CUSTOM_BUILD),)
 # Find the product config makefile for the current product.
 # all_product_configs consists items like:
 # <product_name>:<path_to_the_product_makefile>
@@ -461,3 +464,4 @@ $(foreach c,$(PRODUCT_DEX_PREOPT_MODULE_CONFIGS),\
     $(eval cf := $(subst $(_PDPMC_SP_PLACE_HOLDER),$(space),$(cf)))\
     $(eval DEXPREOPT.$(TARGET_PRODUCT).$(m).CONFIG := $(cf))))
 _pdpmc_modules :=
+endif

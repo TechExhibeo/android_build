@@ -18,6 +18,7 @@ Invoke ". build/envsetup.sh" from your shell to add the following functions to y
 - jgrep:   Greps on all local Java files.
 - resgrep: Greps on all local res/*.xml files.
 - sgrep:   Greps on all local source files.
+- repopick: Utility to fetch changes from Gerrit.
 - godir:   Go to the directory containing a file.
 - cmremote: Add git remote for CM Gerrit Review
 - cmgerrit: A Git wrapper that fetches/pushes patch from/to CM Gerrit Review
@@ -74,13 +75,13 @@ function check_product()
         return
     fi
 
-    if (echo -n $1 | grep -q -e "^cm_") ; then
-       CM_BUILD=$(echo -n $1 | sed -e 's/^cm_//g')
-       export BUILD_NUMBER=$((date +%s%N ; echo $CM_BUILD; hostname) | openssl sha1 | sed -e 's/.*=//g; s/ //g' | cut -c1-10)
+    if (echo -n $1 | grep -q -e "^hazy_") ; then
+       CUSTOM_BUILD=$(echo -n $1 | sed -e 's/^hazy_//g')
+       export BUILD_NUMBER=$((date +%s%N ; echo $CUSTOM_BUILD; hostname) | openssl sha1 | sed -e 's/.*=//g; s/ //g' | cut -c1-10)
     else
-       CM_BUILD=
+       CUSTOM_BUILD=
     fi
-    export CM_BUILD
+    export CUSTOM_BUILD
 
         TARGET_PRODUCT=$1 \
         TARGET_BUILD_VARIANT= \
@@ -287,6 +288,13 @@ function settitle()
         # Inject build data into hardstatus
         export PROMPT_COMMAND="$(echo $PROMPT_COMMAND | sed -e 's/\\033]0;\(.*\)\\007/\\033]0;$ANDROID_PROMPT_PREFIX \1\\007/g')"
     fi
+
+    # Keep us from trying to run in bash that's too old.
+    if [ "${BASH_VERSINFO[0]}" -lt 4 ] ; then
+        return 2
+    fi
+
+    return 0
 }
 
 function check_bash_version()
@@ -300,6 +308,8 @@ function check_bash_version()
     if [ "${BASH_VERSINFO[0]}" -lt 4 ] ; then
         return 2
     fi
+	
+	return 0
 
     return 0
 }
@@ -479,14 +489,6 @@ function add_lunch_combo()
     LUNCH_MENU_CHOICES=(${LUNCH_MENU_CHOICES[@]} $new_combo)
 }
 
-# add the default one here
-add_lunch_combo aosp_arm-eng
-add_lunch_combo aosp_arm64-eng
-add_lunch_combo aosp_mips-eng
-add_lunch_combo aosp_mips64-eng
-add_lunch_combo aosp_x86-eng
-add_lunch_combo aosp_x86_64-eng
-
 function print_lunch_menu()
 {
     local uname=$(uname)
@@ -496,7 +498,7 @@ function print_lunch_menu()
        echo "  (ohai, koush!)"
     fi
     echo
-    if [ "z${CM_DEVICES_ONLY}" != "z" ]; then
+    if [ "z${CUSTOM_DEVICES_ONLY}" != "z" ]; then
        echo "Breakfast menu... pick a combo:"
     else
        echo "Lunch menu... pick a combo:"
@@ -510,7 +512,7 @@ function print_lunch_menu()
         i=$(($i+1))
     done | column
 
-    if [ "z${CM_DEVICES_ONLY}" != "z" ]; then
+    if [ "z${CUSTOM_DEVICES_ONLY}" != "z" ]; then
        echo "... and don't forget the bacon!"
     fi
 
@@ -533,10 +535,10 @@ function breakfast()
 {
     target=$1
     local variant=$2
-    CM_DEVICES_ONLY="true"
+    CUSTOM_DEVICES_ONLY="true"
     unset LUNCH_MENU_CHOICES
     add_lunch_combo full-eng
-    for f in `/bin/ls vendor/cm/vendorsetup.sh 2> /dev/null`
+    for f in `/bin/ls vendor/hazy/vendorsetup.sh 2> /dev/null`
         do
             echo "including $f"
             . $f
@@ -552,11 +554,11 @@ function breakfast()
             # A buildtype was specified, assume a full device name
             lunch $target
         else
-            # This is probably just the CM model name
+            # This is probably just the hazy model name
             if [ -z "$variant" ]; then
                 variant="userdebug"
             fi
-            lunch cm_$target-$variant
+            lunch hazy_$target-$variant
         fi
     fi
     return $?
@@ -649,6 +651,7 @@ function lunch()
 
     set_stuff_for_environment
     printconfig
+
 }
 
 # Tab completion for lunch.
@@ -718,8 +721,8 @@ function tapas()
 function eat()
 {
     if [ "$OUT" ] ; then
-        MODVERSION=$(get_build_var CM_VERSION)
-        ZIPFILE=cm-$MODVERSION.zip
+        MODVERSION=$(get_build_var ROM_VERSION)
+        ZIPFILE=hazy-$MODVERSION.zip
         ZIPPATH=$OUT/$ZIPFILE
         if [ ! -f $ZIPPATH ] ; then
             echo "Nothing to eat"
@@ -734,7 +737,7 @@ function eat()
             done
             echo "Device Found.."
         fi
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD");
+    if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD");
     then
         # if adbd isn't root we can't write to /cache/recovery/
         adb root
@@ -756,7 +759,7 @@ EOF
     fi
     return $?
     else
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
+        echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
     fi
 }
 
@@ -1973,7 +1976,7 @@ function installboot()
     sleep 1
     adb wait-for-online shell mount /system 2>&1 > /dev/null
     adb wait-for-online remount
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD");
+    if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD");
     then
         adb push $OUT/boot.img /cache/
         for i in $OUT/system/lib/modules/*;
@@ -1984,7 +1987,7 @@ function installboot()
         adb shell chmod 644 /system/lib/modules/*
         echo "Installation complete."
     else
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
+        echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
     fi
 }
 
@@ -2018,13 +2021,13 @@ function installrecovery()
     sleep 1
     adb wait-for-online shell mount /system 2>&1 >> /dev/null
     adb wait-for-online remount
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD");
+    if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD");
     then
         adb push $OUT/recovery.img /cache/
         adb shell dd if=/cache/recovery.img of=$PARTITION
         echo "Installation complete."
     else
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
+        echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
     fi
 }
 
@@ -2398,7 +2401,7 @@ function dopush()
         echo "Device Found."
     fi
 
-    if (adb shell cat /system/build.prop | grep -q "ro.cm.device=$CM_BUILD") || [ "$FORCE_PUSH" == "true" ];
+    if (adb shell cat /system/build.prop | grep -q "ro.hazy.device=$CUSTOM_BUILD") || [ "$FORCE_PUSH" == "true" ];
     then
     # retrieve IP and PORT info if we're using a TCP connection
     TCPIPPORT=$(adb devices | egrep '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+[^0-9]+' \
@@ -2501,7 +2504,7 @@ EOF
     rm -f $OUT/.log
     return 0
     else
-        echo "The connected device does not appear to be $CM_BUILD, run away!"
+        echo "The connected device does not appear to be $CUSTOM_BUILD, run away!"
     fi
 }
 
@@ -2628,7 +2631,6 @@ function make()
 }
 
 
-
 if [ "x$SHELL" != "x/bin/bash" ]; then
     case `ps -o command -p $$` in
         *bash*)
@@ -2650,9 +2652,25 @@ do
 done
 unset f
 
+#addcompletions
+
+#check_bash_version && {
+#    dirs="sdk/bash_completion vendor/hazy/bash_completion"
+#    for dir in $dirs; do
+#    if [ -d ${dir} ]; then
+#        for f in `/bin/ls ${dir}/[a-z]*.bash 2> /dev/null`; do
+#            echo "including $f"
+#            . $f
+#        done
+#    fi
+#    done
+#}
+
+#export ANDROID_BUILD_TOP=$(gettop)
+
 # Add completions
 check_bash_version && {
-    dirs="sdk/bash_completion vendor/cm/bash_completion"
+    dirs="sdk/bash_completion vendor/hazy/bash_completion"
     for dir in $dirs; do
     if [ -d ${dir} ]; then
         for f in `/bin/ls ${dir}/[a-z]*.bash 2> /dev/null`; do

@@ -23,6 +23,23 @@ PRODUCT_PACKAGES := \
     libfwdlockengine \
     WAPPushManager
 
+ifneq ($(TARGET_EXCLUDE_LIVEWALLPAPERS), true)
+PRODUCT_PACKAGES += \
+    Galaxy4 \
+    HoloSpiralWallpaper \
+    LiveWallpapers \
+    LiveWallpapersPicker \
+    MagicSmokeWallpapers \
+    NoiseField \
+    PhaseBeam \
+    VisualizationWallpapers \
+    PhotoTable
+else
+PRODUCT_PACKAGES += \
+    LiveWallpapersPicker \
+    PhotoTable
+endif
+
 # Additional settings used in all AOSP builds
 PRODUCT_PROPERTY_OVERRIDES := \
     ro.com.android.dateformat=MM-dd-yyyy
@@ -30,11 +47,8 @@ PRODUCT_PROPERTY_OVERRIDES := \
 # Put en_US first in the list, so make it default.
 PRODUCT_LOCALES := en_US
 
-# Include drawables for all densities
-PRODUCT_AAPT_CONFIG := normal
-
 # Get some sounds
-$(call inherit-product-if-exists, frameworks/base/data/sounds/AllAudio.mk)
+$(call inherit-product-if-exists, frameworks/base/data/sounds/AudioPackage13_48.mk)
 
 # Get the TTS language packs
 $(call inherit-product-if-exists, external/svox/pico/lang/all_pico_languages.mk)
